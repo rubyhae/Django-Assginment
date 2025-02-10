@@ -1,98 +1,100 @@
-{% extends 'todo/base.html' %}
+{% extends 'base.html' %}
 {% block content %}
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-        margin: 0;
-        padding: 20px;
-    }
-    .custom-container {
-        max-width: 600px;
-        margin: auto;
-        background: #fff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-        text-align: center;
-        color: #333;
-    }
-    input[type='text'] {
-        height: 2vh;
-    }
-    .comment-list-item {
-        padding: 10px;
-        margin: 5px 0;
-        background: #eaeaea;
-        border-radius: 5px;
-        transition: background 0.3s;
-    }
-</style>
-<div class="mt-lg-5 custom-container">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>{{ todo.title }}</h1>
-        <div class="d-flex">
-            <button class="btn btn-primary me-2" onclick="location.href='{% url 'cbv_todo_update' todo.id %}'">수정하기</button>
-            <form method="POST" action="{% url 'cbv_todo_delete' todo.id %}">
-                {% csrf_token %}
-                <button id="delete-button" type="submit" class="btn btn-danger">삭제하기</button>
-            </form>
-        </div>
-    </div>
-    <table class="table">
-        {% for key, value in todo.items %}
-            {% if key != 'title' and key != 'id' and key != 'user_id' and key != '_state' and key != '_prefetched_objects_cache'%}
-                <tr>
-                    <th class="bg-light">{{ key }}</th>
-                    <td>{{ value }}</td>
-                </tr>
-            {% endif %}
-        {% endfor %}
-    </table>
-</div>
-<div class="custom-container mt-lg-2">
-    <h2>Comment</h2>
-    <hr>
-    <form method="POST" action="{% url 'comment_create' todo.id %}" class="d-flex justify-content-evenly align-items-center">
-        {% csrf_token %}
-        {{ comment_form.as_p }}
-        <button class="btn btn-primary">댓글달기</button>
-    </form>
-    <ul class="list-unstyled" id="comment_wrapper">
-    {% for comment in page_obj %}
-        <li class="comment-list-item container-fluid">
-            <div class="ps-2 d-flex justify-content-between align-items-center">
-                <p class="mb-0">{{ comment.user }}</p>
-                {% if request.user == comment.user or request.user.is_staff %}
-                <div class="text-decoration-none a-group">
-                    <form method="POST" action="{% url 'comment_delete' comment.id %}">
-                        {% csrf_token %}
-                        <div class="btn-group-sm">
-                            <button class="btn btn-primary" type="button" onclick="modify_view({{ comment.id }})">수정하기</button>
-                            <button type=submit class="btn btn-danger">삭제하기</button>
-                        </div>
-                    </form>
+<body class="bg-light">
+    {% csrf_token %}
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">📌 Todo 정보 </h1>
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white text-center">
+                        <h4>{{ todo.title }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            {% for key, value in todo.items %}
+                                {% if key == 'completed_image' and value %}
+                                    <li class="list-group-item">
+                                        <p class="fw-bold">완료 인증 이미지</p>
+                                        <img src="http://127.0.0.1:8000/media/{{ value }}" alt="완료 인증 이미지" class="img-fluid todo-image">
+                                    </li>
+                                {% endif %}
+                                {% if key in 'description start_date end_date is_completed created_at updated_at' %}
+                                    <li class="list-group-item">
+                                        <p class="fw-bold text-capitalize">{{ key }}</p>
+                                        {% if key == 'description' %}
+                                            <div>{{ value | safe }}</div>
+                                        {% else %}
+                                            <div>{{ value }}</div>
+                                        {% endif %}
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="card-footer text-center d-flex justify-content-lg-end">
+                        <button class="btn btn-primary ms-3" onclick="location.href='{% url 'cbv_todo_update' todo.id %}'">수정하기</button>
+                        <form method="POST" action="{% url 'cbv_todo_delete' todo.id %}">
+                            {% csrf_token %}
+                            <button id="delete-button" type="submit" class="btn btn-outline-info ms-3">삭제하기</button>
+                        </form>
+                    </div>
                 </div>
-                {% endif %}
             </div>
-            <hr>
-            <div>
-                <p class="p-lg-2">{{ comment.message }}</p>
-                <p class="text-end">{{ comment.created_at }}</p>
-            </div>
-            <form id="comment_modify_form_{{ comment.id }}" style="display: none" method="POST" action="{% url 'comment_update' comment.id %}">
+        </div>
+
+        <!-- 댓글 작성 폼 -->
+        <div class="mt-7">
+            <form method="POST" action="{% url 'comment_create' todo.id %}">
                 {% csrf_token %}
                 {{ comment_form.as_p }}
-                <button class="btn btn-primary btn-sm">수정하기</button>
+                <button class="btn btn-primary float-end">댓글 작성</button> <!-- 오른쪽 정렬 -->
             </form>
-        </li>
-    {% endfor %}
-    </ul>
-    {% include 'todo/pagination.html' with fragment='comment_wrapper' %}
-</div>
+        </div>
+
+        <!-- 댓글 목록 -->
+        <div class="mt-5">
+            <h5>댓글 목록</h5>
+            <ul class="list-group">
+                {% for comment in page_obj %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <p class="fw-bold">{{ comment.user }}</p>
+                            {% if request.user == comment.user or request.user.is_staff %}
+                                <div class="d-flex justify-content-end">
+                                    <form method="POST" action="{% url 'comment_delete' comment.id %}">
+                                    {% csrf_token %}
+                                        <div class="btn-group-sm">
+                                            <button class="btn btn-primary" type="button" onclick="modify_view({{ comment.id }})">수정하기</button>
+                                            <button type=submit class="btn btn-info">삭제하기</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <p class="p-lg-2">{{ comment.message }}</p>
+                            <p class="text-end">{{ comment.created_at }}</p>
+                        </div>
+                        <form id="comment_modify_form_{{ comment.id }}" style="display: none" method="POST" action="{% url 'comment_update' comment.id %}">
+                            {% csrf_token %}
+                            {{ comment_form.as_p }}
+                            <button class="btn btn-primary btn-sm">수정하기</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <!-- 페이지네이션 -->
+            {% include 'pagination.html' with fragment='comment_wrapper' %}
+        </div>
+    </div>
+    <!-- Bootstrap JS (Optional) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 <script>
+
+    // 댓글 수정 기능
     function modify_view(commentId) {
         const modifyForm = document.getElementById(`comment_modify_form_${commentId}`);
         if (modifyForm.style.display === "none") {

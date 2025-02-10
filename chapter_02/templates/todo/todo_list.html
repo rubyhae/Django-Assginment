@@ -1,72 +1,70 @@
-{% extends 'todo/base.html' %}
+{% extends 'base.html' %}
+
 {% block content %}
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-        margin: 0;
-        padding: 20px;
-    }
-    .container {
-        max-width: 600px;
-        margin: auto;
-        background: #fff;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-        text-align: center;
-        color: #333;
-    }
-    .todo-list-item {
-        padding: 10px;
-        margin: 5px 0;
-        background: #eaeaea;
-        border-radius: 5px;
-        transition: background 0.3s;
-    }
-    .todo-list-item:hover {
-        background: #d4d4d4;
-    }
-    a {
-        text-decoration: none;
-        color: #333;
-    }
-    .pagination p {
-        color: gray;
-        text-decoration: none;
-        transition: background-color .3s;
-        margin: 0;
-    }
-    .pagination p:hover {
-        background-color: #ddd;
-        border-radius: 5px;
-        cursor: not-allowed;
-    }
-</style>
-<div class="container mt-lg-5">
+<div class="container mt-5">
+    {% if not request.user.is_staff %}
+        <h1 class="text-center mb-4">📌{{ request.user.username }}'s Todo List</h1>
+    {% else %}
+        <h1>Todo list (관리자용)</h1>
+    {% endif %}
+
     {% if request.user.is_authenticated %}
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        {% if not request.user.is_staff %}
-            <h1>{{ request.user.username }}'s Todo List</h1>
-        {% else %}
-            <h1>All To Do List (By. Admin)</h1>
-        {% endif %}
-        <button class="btn btn-success" onclick="location.href='{% url 'cbv_todo_create' %}'">생성하기</button>
-    </div>
-    <form method="GET" class="mb-3">
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="제목 또는 내용을 입력하세요." name="q" value="{% if request.GET.q %}{{ request.GET.q }}{% endif %}">
-            <button class="btn btn-primary" type="submit">Search</button>
+        <!-- Todo 생성 버튼 -->
+        <div class="text-end mb-3">
+            <a href="{% url 'cbv_todo_create' %}" class="btn btn-success">+ 새 Todo 추가</a>
         </div>
-    </form>
-    <ul class="list-unstyled">
-        {% for todo in page_obj.object_list %}
-            <li class="todo-list-item"><a href="{% url 'cbv_todo_info' todo.id %}">[{{ todo.user.username }}] {{ todo.title }}</a></li>
-        {% endfor %}
-    </ul>
-    {% include 'todo/pagination.html' %}
+
+        <!-- 검색 폼 -->
+        <form method="GET" action="{% url 'cbv_todo_list' %}" class="mb-3">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="검색 (제목 또는 설명)" value="{{ request.GET.q }}">
+                <button type="submit" class="btn btn-primary">검색</button>
+            </div>
+        </form>
+
+        <!-- Todo 리스트 -->
+        {% if page_obj %}
+            <ul class="list-group shadow">
+                {% for todo in page_obj %}
+                    <li class="list-group-item d-flex align-items-center">
+                        <!-- 썸네일 이미지 -->
+                        <img class="img-thumbnail" src="{{ todo.thumbnail.url }}" alt="썸네일 이미지" style="width: 100px; height: 100px; object-fit: contain;">
+
+                        <!-- Todo 제목 -->
+                        <a class="text-decoration-none text-black fs-5 fw-bold ms-3" href="{% url 'cbv_todo_info' todo.id %}">
+                            {{ todo.title }}
+                        </a>
+
+                        <!-- 완료/미완료 상태 (맨 오른쪽) -->
+                        {% if todo.is_completed %}
+                            {% if request.user.is_staff %}
+                                <span class="badge bg-primary ms-auto">[{{ todo.user.username }}] 완료</span>
+                            {% else %}
+                                <span class="badge bg-primary ms-auto">완료</span>
+                            {% endif %}
+                        {% else %}
+                            {% if request.user.is_staff %}
+                                <span class="badge bg-secondary ms-auto">[{{ todo.user.username }}] 미완료</span>
+                            {% else %}
+                                <span class="badge bg-secondary ms-auto">미완료</span>
+                            {% endif %}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <!-- 페이지네이션 -->
+            {% include 'pagination.html' %}
+        {% else %}
+            <p class="text-center text-muted">📌 현재 등록된 Todo가 없습니다.</p>
+        {% endif %}
+    {% else %}
+        <!-- 로그인되지 않은 사용자에게 알림 메시지 표시 -->
+        <div class="alert alert-warning text-center">
+            Todo List를 확인하려면 로그인 후 이용 가능합니다.
+            <a href="{% url 'login' %}" class="btn btn-primary btn-sm">로그인 하기</a> 또는
+            <a href="{% url 'signup' %}" class="btn btn-secondary btn-sm">회원가입 하기</a>
+        </div>
     {% endif %}
 </div>
 {% endblock %}
